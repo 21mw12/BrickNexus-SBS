@@ -1,3 +1,5 @@
+sersion "3.7"
+
 services:
   postgres:
     container_name: smartbuilding-postgres
@@ -60,10 +62,8 @@ services:
       # 可选：运行期改配置（SMTP/日志级别）无需重打包时，取消注释并先放置 config.yaml：
       # - ${DOCKER_VOLUME_DIRECTORY:-.}/backend/config.yaml:/app/config.yaml
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
     command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 3033"
     restart: on-failure
 

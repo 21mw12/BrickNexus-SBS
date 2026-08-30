@@ -44,9 +44,9 @@ BrickNexus 以 PostgreSQL + TimescaleDB 为数据底座，通过 FastAPI 提供�
 
 ```shell
 # 构建后端
-docker build -t smartbuilding-backend:[版本]  src/backend
+docker build -t mw/bricknexus-backend:[版本]  src/backend
 # 构建前端
-docker build -t smartbuilding-frontend:[版本] src/frontend
+docker build -t mw/bricknexus-frontend:[版本] src/frontend
 ```
 
 
