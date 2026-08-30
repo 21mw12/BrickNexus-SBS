@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+logs/
+resources/floorPlan/*
+!resources/floorPlan/.gitkeep
+resources/rdf/rule/*

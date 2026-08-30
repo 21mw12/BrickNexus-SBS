@@ -1,0 +1,50 @@
+server:
+  host: 0.0.0.0
+  port: 3033
+  version: "2.0"
+
+log:
+  console_show_level: "DEBUG"
+  file_show_level: "INFO"
+  to_file: True
+  file_fmt: "%Y-%m-%d"
+  item_fmt: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  item_date: "%Y-%m-%d %H:%M:%S"
+
+# 设备时间字符串不携带时区时，统一按照上海时区解释。
+time:
+  default_timezone: "Asia/Shanghai"
+
+database:
+  type: "pgsql"
+  host: "127.0.0.1"
+  port: 5432
+  username: "postgres"
+  password: ""
+  db_names:
+    main: "SmartBuilding"
+
+redis:
+  host: "127.0.0.1"
+  port: 6379
+  db: 0
+  username: null
+  password: ""
+  decode_responses: true
+  max_connections: 20
+  socket_timeout: 5
+  health_check_interval: 30
+  ssl: false
+
+# 规则 EmailAction 使用的全局发件配置。禁用或配置不完整时，应用仍可启动，
+# 但包含 EmailAction 的规则在启用校验时会进入 compile_failed。
+smtp:
+  enabled: false
+  host: ""
+  port: 465
+  security: "ssl"       # none / starttls / ssl
+  username: null
+  password: null
+  sender_email: ""
+  sender_name: "SmartBuilding"
+  timeout_seconds: 20

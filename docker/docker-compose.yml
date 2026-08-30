@@ -1,0 +1,79 @@
+services:
+  postgres:
+    container_name: smartbuilding-postgres
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: SmartBuilding
+      POSTGRES_PASSWORD: "123456"  # 与 backend 的 DB_PASSWORD 一致
+      TZ: Asia/Shanghai
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d SmartBuilding"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  redis:
+    container_name: smartbuilding-redis
+    image: redis:8.6.4
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/redis:/data
+    command: redis-server --requirepass "123456"
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli ping|grep -e "PONG\|NOAUTH"']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: on-failure
+
+  backend:
+    container_name: smartbuilding-backend
+    image: smartbuilding-backend:v2.0.0
+    environment:
+      TZ: Asia/Shanghai
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_NAME: SmartBuilding
+      DB_PASSWORD: "123456"  # 与 postgres 的 POSTGRES_PASSWORD 一致
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "123456"  # 与 redis 的 --requirepass 一致
+      AUTO_CREATE_TABLES: "false"                                       # 结构迁移走 alembic，见文件头
+      SMARTBUILDING_JWT_SECRET: "${SMARTBUILDING_JWT_SECRET:-}"         # 可选；不设置回退代码内置默认值
+      SMARTBUILDING_FERNET_KEY: "${SMARTBUILDING_FERNET_KEY:-}"         # 可选；不设置回退代码内置默认值
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/backend-data/floorPlan:/app/resources/floorPlan
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/backend-data/rdf-rule:/app/resources/rdf/rule
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/backend-data/logs:/app/logs
+      # 可选：运行期改配置（SMTP/日志级别）无需重打包时，取消注释并先放置 config.yaml：
+      # - ${DOCKER_VOLUME_DIRECTORY:-.}/backend/config.yaml:/app/config.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 可选：直接暴露后端；仅需经 nginx 访问时可去掉
+    ports:
+      - "3033:3033"
+    restart: on-failure
+
+  frontend:
+    container_name: smartbuilding-frontend
+    image: smartbuilding-frontend:v2.0.0
+    environment:
+      TZ: Asia/Shanghai
+    depends_on:
+      - backend
+    ports:
+      - "3003:80"
+    restart: on-failure

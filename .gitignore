@@ -1,0 +1,17 @@
+# 环境变量
+.env
+docker/.env
+
+# 运行时数据卷
+docker/postgres/
+docker/redis/
+docker/backend-data/
+
+# 日志
+*.log
+
+.code-workspace
+.vscode/
+
+TODOLIST.md
+docs/
