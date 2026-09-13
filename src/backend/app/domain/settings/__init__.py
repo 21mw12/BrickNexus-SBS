@@ -1,0 +1,2 @@
+"""System settings domain."""
+

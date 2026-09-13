@@ -8,6 +8,7 @@ import {
 } from '../../api/floorPlan'
 import { isMenuGroup, menuConfig } from '../../config/menu'
 import ConfirmModal from '../modals/ConfirmModal.vue'
+import { notifyError, notifySuccess } from '../../utils/notification'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,8 @@ const loadingPlan = ref(false)
 const actionLoading = ref(false)
 const error = ref('')
 const notice = ref('')
+watch(error, value => { if (value) { notifyError(value, '平面图操作失败'); error.value = '' } })
+watch(notice, value => { if (value) { notifySuccess(value, '平面图'); notice.value = '' } })
 const plan = ref<FloorPlan | null>(null)
 const imageObjectUrl = ref('')
 const draftRegions = ref<FloorRoomRegion[]>([])
@@ -182,8 +185,6 @@ onBeforeUnmount(revokeImage)
           <label>楼层<select v-model="floorId" :disabled="!floors.length"><option value="" disabled>{{ floors.length ? '请选择楼层' : '该楼宇暂无楼层' }}</option><option v-for="item in floors" :key="item.asset_id" :value="item.asset_id">{{ item.name }}</option></select></label>
         </div>
       </div>
-
-      <div v-if="error || notice" class="message" :class="error ? 'error' : 'success'">{{ error || notice }}<button @click="clearMessages">×</button></div>
 
       <div class="main-grid">
         <section class="plan-card">

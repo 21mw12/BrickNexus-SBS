@@ -45,6 +45,7 @@ export const menuConfig: MenuEntry[] = [
     children: [
       { name: '实时数据', route: '/data/realtime', path_code: 'data:realtime' },
       { name: '历史数据', route: '/data/history', path_code: 'data:history' },
+      { name: '智能分析', route: '/data/analysis', path_code: 'data:analysis' },
     ],
   },
   {
@@ -63,6 +64,12 @@ export const menuConfig: MenuEntry[] = [
     path_code: 'rules',
   },
   {
+    icon: '/icon/page_sandbox_white.png',
+    name: '数字孪生沙盒',
+    route: '/sandbox',
+    path_code: 'sandbox',
+  },
+  {
     icon: '/icon/page_user_white.png',
     name: '用户管理',
     children: [
@@ -75,6 +82,11 @@ export const menuConfig: MenuEntry[] = [
     name: '系统日志',
     route: '/logs',
     path_code: 'logs',
+  },
+  {
+    name: '系统设置',
+    route: '/settings',
+    path_code: 'settings',
   },
 ]
 

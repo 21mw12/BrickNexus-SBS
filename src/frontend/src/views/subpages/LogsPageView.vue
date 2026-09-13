@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { fetchLogs, type LogLevel, type LogQuery, type LogType, type SystemLog } from '../../api/log'
+import { notifyRetryableError } from '../../utils/notification'
 
 const TYPE_OPTIONS: { value: LogType; label: string }[] = [
   { value: 'rule_action', label: '规则动作日志' },
@@ -19,6 +20,7 @@ const applied = reactive({ type: '', level: '', operator: '', time: '' })
 const logs = ref<SystemLog[]>([])
 const loading = ref(false)
 const error = ref('')
+watch(error, value => { if (value) { notifyRetryableError(value, () => void load(page.value), '日志加载失败'); error.value = '' } })
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -119,7 +121,6 @@ onBeforeUnmount(() => { observer?.disconnect(); window.removeEventListener('resi
         <div class="toolbar-actions"><button type="button" class="secondary" @click="reset">重置</button><button class="primary">查询日志</button></div>
       </form>
 
-      <div v-if="error" class="alert">{{ error }} <button @click="load(page)">重新加载</button></div>
       <div ref="tableArea" class="table-area">
         <table>
           <thead><tr><th class="time-col">时间</th><th class="type-col">类型</th><th class="level-col">等级</th><th class="operator-col">操作人</th><th>日志内容</th></tr></thead>

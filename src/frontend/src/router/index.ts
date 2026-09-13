@@ -15,11 +15,14 @@ import SensorModelPageView from '../views/subpages/SensorModelPageView.vue'
 import FloorPlanPageView from '../views/subpages/FloorPlanPageView.vue'
 import RealtimeDataPageView from '../views/subpages/RealtimeDataPageView.vue'
 import HistoryDataPageView from '../views/subpages/HistoryDataPageView.vue'
+import AnalyticsPageView from '../views/subpages/AnalyticsPageView.vue'
 import ChannelRequestsPageView from '../views/subpages/ChannelRequestsPageView.vue'
 import ChannelManagementPageView from '../views/subpages/ChannelManagementPageView.vue'
 import ChannelControlsPageView from '../views/subpages/ChannelControlsPageView.vue'
 import RulesPageView from '../views/subpages/RulesPageView.vue'
 import LogsPageView from '../views/subpages/LogsPageView.vue'
+import SandboxPageView from '../views/subpages/SandboxWorkspacePage.vue'
+import SettingsPageView from '../views/subpages/SettingsPageView.vue'
 
 const routes = [
   {
@@ -47,6 +50,11 @@ const routes = [
         path: 'dashboard',
         name: 'DashBoard',
         component: HomePageView,
+      },
+      {
+        path: 'sandbox',
+        name: 'Sandbox',
+        component: SandboxPageView,
       },
 
       // 楼层平面图配置 相关页面
@@ -83,6 +91,11 @@ const routes = [
         path: '/data/history',
         name: 'DataHistory',
         component: HistoryDataPageView,
+      },
+      {
+        path: '/data/analysis',
+        name: 'DataAnalysis',
+        component: AnalyticsPageView,
       },
 
       // 采控通道配置 相关页面
@@ -126,6 +139,11 @@ const routes = [
         path: 'logs',
         name: 'Logs',
         component: LogsPageView,
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: SettingsPageView,
       },
     ],
   },

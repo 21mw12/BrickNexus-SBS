@@ -112,6 +112,13 @@ watch(() => form.asset_type, () => {
 // ---------- 传感器型号下拉 ----------
 const sensorModels = ref<SensorModelInfo[]>([])
 
+function sensorModelLabel(model: SensorModelInfo) {
+  const sensorName = model.sensor_type?.trim() || ''
+  const modelName = model.model_name?.trim() || ''
+  if (sensorName && modelName) return `${sensorName} - ${modelName}`
+  return sensorName || modelName || '未命名传感器'
+}
+
 async function loadSensorModels() {
   try {
     const result = await fetchSensorModelPage(1, 200)
@@ -319,7 +326,7 @@ async function confirm() {
             <select v-model="form.model_id" class="field-select" required>
               <option value="" disabled>请选择传感器型号</option>
               <option v-for="m in sensorModels" :key="m.model_id" :value="m.model_id">
-                {{ m.sensor_type || '-' }} - {{ m.model_name || m.model_id }}
+                {{ sensorModelLabel(m) }}
               </option>
             </select>
           </div>

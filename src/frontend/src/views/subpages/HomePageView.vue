@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCurrentUser } from '../../api/auth'
 import { fetchDashboardOverview, type DashboardAssetStatistic, type DashboardOverview, type DashboardPageItem } from '../../api/dashboard'
 import { isMenuGroup, menuConfig } from '../../config/menu'
+import { notifyRetryableError } from '../../utils/notification'
 
 const router = useRouter()
 const user = getCurrentUser() || { nickname: '游客' }
@@ -12,6 +13,7 @@ const overview = ref<DashboardOverview | null>(null)
 const loading = ref(false)
 const error = ref('')
 const updatedAt = ref<Date | null>(null)
+watch(error, value => { if (value) { notifyRetryableError(value, () => void loadOverview(), '看板加载失败'); error.value = '' } })
 
 const routeMap = new Map<string, string>()
 for (const entry of menuConfig) {
@@ -100,10 +102,6 @@ onMounted(loadOverview)
         <button :disabled="loading" @click="loadOverview"><span :class="{ rotating: loading }">↻</span>{{ loading ? '正在刷新' : '刷新概览' }}</button>
       </div>
     </section>
-
-    <div v-if="error" class="error-banner">
-      <span><b>!</b>{{ error }}</span><button @click="loadOverview">重新加载</button>
-    </div>
 
     <div class="dashboard-layout">
       <div class="dashboard-left">

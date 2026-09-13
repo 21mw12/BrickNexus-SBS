@@ -19,6 +19,7 @@ from app.domain.rule.schema import EventQuery, RuleConfig, RuleQuery, TaskQuery
 from app.infra.RDF import asset_rdf_runtime
 from .RuleRDFService import rule_rdf_service
 from .RuleRuntime import rule_runtime
+from .RulePermissionService import RulePermissionService
 
 
 class RuleService:
@@ -68,6 +69,7 @@ class RuleService:
 
     @staticmethod
     def create(config: RuleConfig, authorization: str, db: Session) -> dict:
+        RulePermissionService(authorization, db).validate_config(config)
         config = rule_rdf_service.ensure_action_ids(config)
         RuleService._validate_point(config)
         RuleService._validate_control_actions(config, authorization, db)
@@ -98,6 +100,7 @@ class RuleService:
 
     @staticmethod
     def edit(rule_id: str, config: RuleConfig, authorization: str, db: Session) -> dict:
+        RulePermissionService(authorization, db).validate_config(config)
         row = db.get(Rule, rule_id)
         if row is None:
             raise ValidationError("rule not found")
@@ -151,6 +154,8 @@ class RuleService:
                 db.rollback()
                 rule_runtime.load_rule(rule_id)
                 raise
+        pending_config, _ = rule_rdf_service.read(row.rule_file_name, rule_id)
+        RulePermissionService(authorization, db).validate_config(pending_config)
         row.status = "validating"
         row.error = None
         db.flush()

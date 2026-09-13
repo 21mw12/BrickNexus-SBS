@@ -1,8 +1,8 @@
 import importlib
 import json
 
-from app.domain.data.api.HistoryAPI import query_history
-from app.domain.data.schema.HistorySchema import HistoryQuerySchema
+from app.domain.data.api.HistoryAPI import query_history, query_history_heatmap
+from app.domain.data.schema.HistorySchema import HistoryHeatmapQuerySchema, HistoryQuerySchema
 
 history_api_module = importlib.import_module("app.domain.data.api.HistoryAPI")
 
@@ -88,6 +88,31 @@ def test_history_api_wraps_successful_result(monkeypatch) -> None:
     )
 
     response = query_history(_schema(), "Bearer token", _Db())
+
+    assert response.status_code == 200
+    assert _content(response)["data"] == expected
+
+
+def test_heatmap_api_reuses_history_permissions_and_wraps_result(monkeypatch) -> None:
+    expected = {"times": [], "points": [], "correlations": {}}
+    data = HistoryHeatmapQuerySchema(**_schema().model_dump())
+    monkeypatch.setattr(
+        history_api_module.sensor_point_repository,
+        "get_sensor_ids_by_point_ids",
+        lambda point_ids, db: {"point-1": "sensor-1"},
+    )
+    monkeypatch.setattr(
+        history_api_module,
+        "check_asset_instance_permission",
+        lambda token, asset_id, code, db: True,
+    )
+    monkeypatch.setattr(
+        history_api_module.history_heatmap_service,
+        "query",
+        lambda data, db: expected,
+    )
+
+    response = query_history_heatmap(data, "Bearer token", _Db())
 
     assert response.status_code == 200
     assert _content(response)["data"] == expected

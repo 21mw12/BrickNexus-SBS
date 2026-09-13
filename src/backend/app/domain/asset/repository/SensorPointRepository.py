@@ -83,6 +83,33 @@ class SensorPointRepository(BaseRepository[SensorPoint]):
         ).all()
         return {point_id: sensor_id for point_id, sensor_id in rows}
 
+    def get_metadata_by_point_ids(
+        self,
+        point_ids: List[str],
+        db: Session,
+    ) -> Dict[str, Dict[str, str]]:
+        """批量返回分析展示所需的测点名称、单位和所属传感器。"""
+        if not point_ids:
+            return {}
+
+        rows = db.execute(
+            select(
+                SensorPoint.point_id,
+                SensorPoint.sensor_id,
+                SensorPoint.point_name,
+                SensorPoint.point_unit,
+            ).where(SensorPoint.point_id.in_(point_ids))
+        ).all()
+        return {
+            point_id: {
+                "point_id": point_id,
+                "sensor_id": sensor_id,
+                "point_name": point_name,
+                "point_unit": point_unit,
+            }
+            for point_id, sensor_id, point_name, point_unit in rows
+        }
+
     def delete_by_sensor_id(self, sensor_id: str, db: Session) -> int:
         """ 删除指定传感器的所有测点 """
         return self.bulk_delete("sensor_id", [sensor_id], db)

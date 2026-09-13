@@ -1,6 +1,12 @@
-from .HistorySchema import HistoryQuerySchema
+from .HistorySchema import (
+    HistoryHeatmapQuerySchema,
+    HistoryQuerySchema,
+    RawHistoryQuerySchema,
+)
+from .TimeSeriesQuerySchema import PointTimeRangeSchema, SampledPointTimeRangeSchema
 
 
 __all__ = [
-    "HistoryQuerySchema",
+    "HistoryQuerySchema", "HistoryHeatmapQuerySchema", "RawHistoryQuerySchema",
+    "PointTimeRangeSchema", "SampledPointTimeRangeSchema",
 ]

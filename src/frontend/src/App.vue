@@ -1,5 +1,10 @@
+<script setup lang="ts">
+import AppNotificationHost from './components/AppNotificationHost.vue'
+</script>
+
 <template>
   <router-view />
+  <AppNotificationHost />
 </template>
 
 <style>

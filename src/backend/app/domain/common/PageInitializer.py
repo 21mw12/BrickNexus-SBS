@@ -39,6 +39,10 @@ PAGE_TREE: List[Dict[str, Any]] = [
         "path_code": "dashboard",
     },
     {
+        "name": "数字孪生沙盒",
+        "path_code": "sandbox",
+    },
+    {
         "name": "楼层平面图配置",
         "path_code": "floorPlan",
     },
@@ -71,6 +75,10 @@ PAGE_TREE: List[Dict[str, Any]] = [
             {
                 "name": "历史数据",
                 "path_code": "data:history"
+            },
+            {
+                "name": "智能分析",
+                "path_code": "data:analysis"
             },
         ],
     },
@@ -113,6 +121,10 @@ PAGE_TREE: List[Dict[str, Any]] = [
     {
         "name": "系统日志",
         "path_code": "logs",
+    },
+    {
+        "name": "系统设置",
+        "path_code": "settings",
     },
 ]
 

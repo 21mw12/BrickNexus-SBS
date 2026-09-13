@@ -426,8 +426,8 @@ class UserService:
             ])
 
         # 2. 构建带权限标记的资产实例树
-        raw_tree = AssetService.query_assets_tree(db)
         viewable = get_viewable_asset_ids(authorization, db)
+        raw_tree = AssetService.query_assets_tree(db, viewable=viewable)
 
         def _annotate_tree(nodes: list) -> list:
             result = []

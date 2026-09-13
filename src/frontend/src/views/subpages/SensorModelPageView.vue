@@ -5,29 +5,48 @@ import { createPoint, deletePoint, editPointDescription, fetchPointPage, type Po
 import { createSensorModel, deleteSensorModel, editSensorModel, fetchSensorModelPage, type SensorModelInfo } from '../../api/sensorModel'
 import { isMenuGroup, menuConfig } from '../../config/menu'
 import ConfirmModal from '../modals/ConfirmModal.vue'
+import { notifyRetryableError } from '../../utils/notification'
 
 const route = useRoute(); const router = useRouter()
 const siblings = computed(() => { for (const item of menuConfig) if (isMenuGroup(item) && item.children.some(child => child.route === route.path)) return item.children; return [] })
 const activeTab = ref<'points' | 'models'>('models')
-const pointPageSize = ref(10); const modelPageSize = ref(6); const mainCard = ref<HTMLElement | null>(null)
+const pointPageSize = ref(10); const modelPageSize = ref(6); const mainCard = ref<HTMLElement | null>(null); const pointTableWrap = ref<HTMLElement | null>(null); const modelGrid = ref<HTMLElement | null>(null)
 const points = ref<PointDefinition[]>([]); const pointTotal = ref(0); const pointPage = ref(1); const pointLoading = ref(false); const pointError = ref('')
 const models = ref<SensorModelInfo[]>([]); const modelTotal = ref(0); const modelPage = ref(1); const modelLoading = ref(false); const modelError = ref('')
 const pointPages = computed(() => Math.max(1, Math.ceil(pointTotal.value / pointPageSize.value))); const modelPages = computed(() => Math.max(1, Math.ceil(modelTotal.value / modelPageSize.value)))
-async function loadPoints(page = pointPage.value) { pointLoading.value = true; pointError.value = ''; try { const r = await fetchPointPage(page, pointPageSize.value); points.value = r.data; pointTotal.value = r.total; pointPage.value = page } catch (e: any) { pointError.value = e?.message || '加载测点失败' } finally { pointLoading.value = false } }
-async function loadModels(page = modelPage.value) { modelLoading.value = true; modelError.value = ''; try { const r = await fetchSensorModelPage(page, modelPageSize.value); models.value = r.data; modelTotal.value = r.total; modelPage.value = page } catch (e: any) { modelError.value = e?.message || '加载型号失败' } finally { modelLoading.value = false } }
+function sensorModelLabel(model: SensorModelInfo) { const sensorName = model.sensor_type?.trim() || ''; const modelName = model.model_name?.trim() || ''; if (sensorName && modelName) return `${sensorName} - ${modelName}`; return sensorName || modelName || '未命名传感器' }
+async function loadPoints(page = pointPage.value) { pointLoading.value = true; pointError.value = ''; try { const r = await fetchPointPage(page, pointPageSize.value); points.value = r.data; pointTotal.value = r.total; pointPage.value = page } catch (e: any) { pointError.value = e?.message || '加载测点失败' } finally { pointLoading.value = false; await nextTick(); scheduleAdjust() } }
+async function loadModels(page = modelPage.value) { modelLoading.value = true; modelError.value = ''; try { const r = await fetchSensorModelPage(page, modelPageSize.value); models.value = r.data; modelTotal.value = r.total; modelPage.value = page } catch (e: any) { modelError.value = e?.message || '加载型号失败' } finally { modelLoading.value = false; await nextTick(); scheduleAdjust() } }
 
 let resizeObserver: ResizeObserver | null = null
 let resizeTimer: ReturnType<typeof setTimeout> | null = null
 function adjustPageSizes() {
   if (!mainCard.value) return
-  const { width, height } = mainCard.value.getBoundingClientRect()
-  // 预留顶部标签、表头、分页和内边距；保证数据区域刚好落在卡片内部。
-  const nextPointSize = Math.max(3, Math.min(50, Math.floor((height - 195) / 49)))
-  const columns = Math.max(1, Math.floor((width - 48 + 14) / (310 + 14)))
-  const rows = Math.max(1, Math.floor((height - 165) / 174))
-  const nextModelSize = Math.max(1, Math.min(50, columns * rows))
-  if (nextPointSize !== pointPageSize.value) { pointPageSize.value = nextPointSize; void loadPoints(1) }
-  if (nextModelSize !== modelPageSize.value) { modelPageSize.value = nextModelSize; void loadModels(1) }
+  if (activeTab.value === 'points' && pointTableWrap.value) {
+    const wrapRect = pointTableWrap.value.getBoundingClientRect()
+    const header = pointTableWrap.value.querySelector('thead')
+    const firstRow = pointTableWrap.value.querySelector('tbody tr')
+    const headerBottom = header?.getBoundingClientRect().bottom ?? wrapRect.top + 43
+    const rowHeight = firstRow?.getBoundingClientRect().height || 49
+    // 只请求剩余高度内能完整放下的行，避免最后一行被容器裁掉一半。
+    const nextPointSize = Math.max(1, Math.min(50, Math.floor((wrapRect.bottom - headerBottom) / rowHeight)))
+    if (nextPointSize !== pointPageSize.value) { pointPageSize.value = nextPointSize; void loadPoints(1) }
+    return
+  }
+  if (activeTab.value === 'models' && modelGrid.value) {
+    const styles = getComputedStyle(modelGrid.value)
+    const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
+    const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+    const columnGap = parseFloat(styles.columnGap) || 14
+    const rowGap = parseFloat(styles.rowGap) || 14
+    const contentWidth = modelGrid.value.clientWidth - horizontalPadding
+    const contentHeight = modelGrid.value.clientHeight - verticalPadding
+    const cardHeight = modelGrid.value.querySelector<HTMLElement>('.model-card')?.getBoundingClientRect().height || 210
+    const columns = Math.max(1, Math.floor((contentWidth + columnGap) / (310 + columnGap)))
+    const rows = Math.max(1, Math.floor((contentHeight + rowGap) / (cardHeight + rowGap)))
+    const nextModelSize = Math.max(1, Math.min(50, columns * rows))
+    if (nextModelSize !== modelPageSize.value) { modelPageSize.value = nextModelSize; void loadModels(1) }
+  }
 }
 function scheduleAdjust() { if (resizeTimer) clearTimeout(resizeTimer); resizeTimer = setTimeout(adjustPageSizes, 120) }
 
@@ -38,6 +57,8 @@ function openPointEdit(p: PointDefinition) { pointMode.value = 'edit'; editPoint
 async function savePoint() { pointError.value = ''; const name = pointForm.point_name.trim(), unit = pointForm.point_unit.trim(), desc = pointForm.point_description.trim(); if (pointMode.value === 'create' && (!name || name.length > 20)) { pointError.value = '测点名称长度必须为 1～20 个字符'; return } if (unit.length > 10) { pointError.value = '测点单位不能超过 10 个字符'; return } if (desc.length > 200) { pointError.value = '测点描述不能超过 200 个字符'; return } pointSaving.value = true; try { if (pointMode.value === 'create') await createPoint({ point_name: name, point_unit: unit, point_description: desc || null }); else await editPointDescription(editPointId.value, desc || null); pointModal.value = false; await loadPoints(pointMode.value === 'create' ? 1 : pointPage.value); await loadModels(modelPage.value) } catch (e: any) { pointError.value = e?.message || '保存测点失败' } finally { pointSaving.value = false } }
 
 const modelModal = ref(false); const modelMode = ref<'create' | 'edit'>('create'); const modelSaving = ref(false); const editModelId = ref(''); const allPoints = ref<PointDefinition[]>([]); const selectedPointIds = ref<string[]>([]); const allPointsLoading = ref(false)
+watch(pointError, value => { if (value && !pointModal.value) { notifyRetryableError(value, () => void loadPoints(pointPage.value), '测点列表加载失败'); pointError.value = '' } })
+watch(modelError, value => { if (value && !modelModal.value) { notifyRetryableError(value, () => void loadModels(modelPage.value), '型号列表加载失败'); modelError.value = '' } })
 const modelForm = reactive({ sensor_type: '', model_name: '', remark: '' })
 async function openModelCreate() { modelMode.value = 'create'; editModelId.value = ''; Object.assign(modelForm, { sensor_type: '', model_name: '', remark: '' }); selectedPointIds.value = []; modelError.value = ''; modelModal.value = true; allPointsLoading.value = true; try { const r = await fetchPointPage(1, 500); allPoints.value = r.data } catch (e: any) { modelError.value = e?.message || '加载可选测点失败' } finally { allPointsLoading.value = false } }
 function openModelEdit(m: SensorModelInfo) { modelMode.value = 'edit'; editModelId.value = m.model_id; Object.assign(modelForm, { sensor_type: m.sensor_type || '', model_name: m.model_name || '', remark: m.remark || '' }); allPoints.value = m.points; selectedPointIds.value = m.points.map(p => p.point_id); modelError.value = ''; modelModal.value = true }
@@ -55,8 +76,8 @@ onBeforeUnmount(() => { resizeObserver?.disconnect(); if (resizeTimer) clearTime
 <template><main class="page-content"><section class="workspace">
   <nav class="sibling-tabs"><button v-for="sib in siblings" :key="sib.route" class="sibling-tab" :class="{ active: route.path === sib.route }" @click="router.push(sib.route)">{{ sib.name }}</button></nav>
   <section ref="mainCard" class="main-card"><div class="module-tabs"><button :class="{ active: activeTab === 'models' }" @click="activeTab = 'models'"><strong>传感器型号</strong><small>{{ modelTotal }} 个型号</small></button><button :class="{ active: activeTab === 'points' }" @click="activeTab = 'points'"><strong>测点定义</strong><small>{{ pointTotal }} 个全局测点</small></button><div class="relation"><span>测点定义</span><b>→</b><span>型号绑定</span><b>→</b><span>传感器实例</span></div><button class="top-create" @click="activeTab === 'models' ? openModelCreate() : openPointCreate()">＋ {{ activeTab === 'models' ? '新增型号' : '新增测点' }}</button></div>
-    <template v-if="activeTab === 'points'"><div v-if="pointError && !pointModal" class="alert top-alert">{{ pointError }}</div><div class="table-wrap"><table><thead><tr><th>测点名称</th><th>单位</th><th>描述</th><th>操作</th></tr></thead><tbody><tr v-for="p in points" :key="p.point_id"><td><strong>{{ p.point_name }}</strong></td><td><span class="unit-tag">{{ p.point_unit || '无单位' }}</span></td><td class="description">{{ p.point_description || '—' }}</td><td class="actions"><button @click="openPointEdit(p)">编辑描述</button><button class="danger" @click="askDelete('point', p.point_id, p.point_name)">删除</button></td></tr></tbody></table><div v-if="pointLoading" class="empty">正在加载...</div><div v-else-if="!points.length" class="empty">暂无测点，请先创建全局测点</div></div><div class="pagination" v-if="pointTotal"><span>共 {{ pointTotal }} 条</span><button :disabled="pointPage <= 1" @click="loadPoints(pointPage - 1)">上一页</button><b>{{ pointPage }} / {{ pointPages }}</b><button :disabled="pointPage >= pointPages" @click="loadPoints(pointPage + 1)">下一页</button></div></template>
-    <template v-else><div v-if="modelError && !modelModal" class="alert top-alert">{{ modelError }}</div><div class="model-grid"><article v-for="m in models" :key="m.model_id" class="model-card"><header><h3>{{ m.sensor_type || '未分类' }}<span class="model-name">{{ m.model_name || '未命名型号' }}</span></h3><span class="count">{{ m.points.length }} 测点</span></header><p class="remark">{{ m.remark || '暂无备注' }}</p><div class="bound-points"><span v-for="p in m.points" :key="p.point_id" :title="p.point_description || ''">{{ p.point_name }}<small>{{ p.point_unit }}</small></span><em v-if="!m.points.length">未绑定测点</em></div><footer><div><button @click="openModelEdit(m)">编辑</button><button class="danger" @click="askDelete('model', m.model_id, m.model_name || m.model_id)">删除</button></div></footer></article><div v-if="modelLoading" class="empty full">正在加载...</div><div v-else-if="!models.length" class="empty full">暂无传感器型号</div></div><div class="pagination" v-if="modelTotal"><span>共 {{ modelTotal }} 条</span><button :disabled="modelPage <= 1" @click="loadModels(modelPage - 1)">上一页</button><b>{{ modelPage }} / {{ modelPages }}</b><button :disabled="modelPage >= modelPages" @click="loadModels(modelPage + 1)">下一页</button></div></template>
+    <template v-if="activeTab === 'points'"><div v-if="pointError && !pointModal" class="alert top-alert">{{ pointError }}</div><div ref="pointTableWrap" class="table-wrap"><table><thead><tr><th>测点名称</th><th>单位</th><th>描述</th><th>操作</th></tr></thead><tbody><tr v-for="p in points" :key="p.point_id"><td><strong>{{ p.point_name }}</strong></td><td><span class="unit-tag">{{ p.point_unit || '无单位' }}</span></td><td class="description" :title="p.point_description || ''">{{ p.point_description || '—' }}</td><td class="actions"><button @click="openPointEdit(p)">编辑描述</button><button class="danger" @click="askDelete('point', p.point_id, p.point_name)">删除</button></td></tr></tbody></table><div v-if="pointLoading" class="empty">正在加载...</div><div v-else-if="!points.length" class="empty">暂无测点，请先创建全局测点</div></div><div class="pagination" v-if="pointTotal"><span>共 {{ pointTotal }} 条</span><button :disabled="pointPage <= 1" @click="loadPoints(pointPage - 1)">上一页</button><b>{{ pointPage }} / {{ pointPages }}</b><button :disabled="pointPage >= pointPages" @click="loadPoints(pointPage + 1)">下一页</button></div></template>
+    <template v-else><div v-if="modelError && !modelModal" class="alert top-alert">{{ modelError }}</div><div ref="modelGrid" class="model-grid"><article v-for="m in models" :key="m.model_id" class="model-card"><header><h3><span class="sensor-type">{{ m.sensor_type || m.model_name || '未命名传感器' }}</span><template v-if="m.sensor_type && m.model_name"><span class="model-separator">-</span><span class="model-name">{{ m.model_name }}</span></template></h3><span class="count">{{ m.points.length }} 测点</span></header><p class="remark" :title="m.remark || ''">{{ m.remark || '暂无备注' }}</p><div class="bound-points"><span v-for="p in m.points" :key="p.point_id" :title="p.point_description || ''">{{ p.point_name }}<small>{{ p.point_unit }}</small></span><em v-if="!m.points.length">未绑定测点</em></div><footer><div><button @click="openModelEdit(m)">编辑</button><button class="danger" @click="askDelete('model', m.model_id, sensorModelLabel(m))">删除</button></div></footer></article><div v-if="modelLoading" class="empty full">正在加载...</div><div v-else-if="!models.length" class="empty full">暂无传感器型号</div></div><div class="pagination" v-if="modelTotal"><span>共 {{ modelTotal }} 条</span><button :disabled="modelPage <= 1" @click="loadModels(modelPage - 1)">上一页</button><b>{{ modelPage }} / {{ modelPages }}</b><button :disabled="modelPage >= modelPages" @click="loadModels(modelPage + 1)">下一页</button></div></template>
   </section></section>
   <div v-if="pointModal" class="overlay" @click.self="pointModal = false"><form class="modal" @submit.prevent="savePoint"><header><h3>{{ pointMode === 'create' ? '新增全局测点' : '编辑测点描述' }}</h3><p>{{ pointMode === 'create' ? '名称与单位的组合必须唯一' : '名称和单位创建后不可修改' }}</p></header><div class="modal-body"><label>测点名称<input v-model="pointForm.point_name" maxlength="20" :disabled="pointMode === 'edit'" placeholder="例如：环境温度"></label><label>测点单位<input v-model="pointForm.point_unit" maxlength="10" :disabled="pointMode === 'edit'" placeholder="无单位时留空"></label><label class="wide">测点描述<textarea v-model="pointForm.point_description" maxlength="200" rows="4" placeholder="说明该测点的具体含义"></textarea><small>{{ pointForm.point_description.length }} / 200</small></label><div v-if="pointError" class="alert wide">{{ pointError }}</div></div><footer><button type="button" class="btn muted" @click="pointModal = false">取消</button><button class="btn primary" :disabled="pointSaving">{{ pointSaving ? '保存中...' : '保存' }}</button></footer></form></div>
   <div v-if="modelModal" class="overlay" @click.self="modelModal = false"><form class="modal model-modal" @submit.prevent="saveModel"><header><h3>{{ modelMode === 'create' ? '新增传感器型号' : '编辑传感器型号' }}</h3><p>{{ modelMode === 'create' ? '从全局测点库选择需要绑定的测点' : '型号创建后不允许修改测点绑定' }}</p></header><div class="modal-body"><label>传感器类型<input v-model="modelForm.sensor_type" maxlength="50" placeholder="例如：温湿度"></label><label>型号名称<input v-model="modelForm.model_name" maxlength="50" placeholder="例如：DHT22"></label><label class="wide">备注<input v-model="modelForm.remark" maxlength="100" placeholder="型号说明"></label><div class="wide point-selector"><div class="selector-title"><strong>绑定测点</strong><span>{{ selectedPointIds.length }} 个</span></div><div v-if="allPointsLoading" class="empty">正在加载测点...</div><div v-else class="point-options"><label v-for="p in allPoints" :key="p.point_id" :class="{ selected: selectedPointIds.includes(p.point_id), locked: modelMode === 'edit' }"><input type="checkbox" :checked="selectedPointIds.includes(p.point_id)" :disabled="modelMode === 'edit'" @change="toggleModelPoint(p.point_id)"><span><b>{{ p.point_name }}</b><small>{{ p.point_unit || '无单位' }} · {{ p.point_description || '暂无描述' }}</small></span></label><div v-if="!allPoints.length" class="empty">测点库为空，请先创建测点</div></div></div><div v-if="modelError" class="alert wide">{{ modelError }}</div></div><footer><button type="button" class="btn muted" @click="modelModal = false">取消</button><button class="btn primary" :disabled="modelSaving">{{ modelSaving ? '保存中...' : '保存' }}</button></footer></form></div>
@@ -73,4 +94,24 @@ onBeforeUnmount(() => { resizeObserver?.disconnect(); if (resizeTimer) clearTime
 .module-tabs .top-create{min-width:auto;height:34px;margin-left:auto;padding:0 14px;color:#fff;background:#3b82f6;text-align:center;font-size:12px;font-weight:600}.module-tabs .top-create:hover{background:#2563eb}.table-wrap,.model-grid{padding-top:18px}.top-alert{margin-top:14px}
 .table-wrap,.model-grid{overflow:hidden}.main-card{overflow:hidden}.model-grid{grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}.pagination{position:relative;z-index:2;min-height:62px;background:#fff}
 @media(max-width:850px){.module-tabs .relation{display:none}}
+
+/* 列表容量按这些实际尺寸计算，保证分页区之前只出现完整的数据项。 */
+table{table-layout:fixed}
+th,td{height:49px;white-space:nowrap}
+th:nth-child(1){width:24%}
+th:nth-child(2){width:16%}
+th:nth-child(4){width:150px}
+td{overflow:hidden;text-overflow:ellipsis}
+.table-wrap{overflow-x:auto;overflow-y:hidden}
+.model-grid{grid-auto-rows:210px}
+.model-card{min-width:0;height:210px;display:flex;flex-direction:column;overflow:hidden}
+.model-card header{min-width:0;gap:10px}
+.model-card h3{min-width:0}
+.sensor-type,.model-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sensor-type,.model-name{flex:1}
+.model-separator{flex:none;color:#94a3b8}
+.count{flex:none}
+.model-card .remark{margin:10px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bound-points{height:58px;min-height:58px;overflow:auto}
+.bound-points span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>

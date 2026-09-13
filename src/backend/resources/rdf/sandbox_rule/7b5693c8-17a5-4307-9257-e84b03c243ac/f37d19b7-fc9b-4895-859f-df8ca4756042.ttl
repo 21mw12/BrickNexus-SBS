@@ -1,0 +1,43 @@
+@prefix ex: <https://seee.sues.edu.cn/#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sb: <https://seee.sues.edu.cn/ontology#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:rule_f37d19b7-fc9b-4895-859f-df8ca4756042 a sb:Rule ;
+    rdfs:label "新沙盒规则" ;
+    rdfs:comment "沙盒独立规则" ;
+    sb:configJson "{\"actions\":[{\"action_id\":\"91465e62-707c-46ce-bf50-6f1471e234b5\",\"params\":{\"content\":\"{{$.point_name}} 在 {{$.time}} 触发模拟告警，值为 {{$.value}}\",\"level\":\"WARNING\"},\"type\":\"LogAction\"}],\"condition\":{\"children\":null,\"left\":{\"duration_seconds\":null,\"samples\":null,\"selector_id\":\"monitor\",\"time_unit_seconds\":null,\"tolerance_seconds\":null,\"type\":\"PointValue\",\"value\":null,\"window_seconds\":null},\"operator\":\"GreaterThan\",\"right\":{\"duration_seconds\":null,\"samples\":null,\"selector_id\":null,\"time_unit_seconds\":null,\"tolerance_seconds\":null,\"type\":\"ConstantValue\",\"value\":110.0,\"window_seconds\":null},\"type\":\"Comparison\"},\"description\":\"沙盒独立规则\",\"rule_name\":\"新沙盒规则\",\"selector\":{\"point_id\":\"3b7f321b-5647-472a-b75e-9e39efc668fb\",\"selector_id\":\"monitor\",\"type\":\"PointIdSelector\"},\"trigger_policy\":{\"cooldown_seconds\":0.0,\"merge_window_seconds\":0.0,\"recovery_count\":1,\"recovery_duration_seconds\":0.0,\"repeat_interval_seconds\":null,\"repeat_policy\":\"OncePerIncident\",\"trigger_count\":1,\"trigger_duration_seconds\":0.0}}"^^xsd:string ;
+    sb:hasAction ex:action_91465e62-707c-46ce-bf50-6f1471e234b5 ;
+    sb:hasCondition ex:condition_f37d19b7-fc9b-4895-859f-df8ca4756042_root ;
+    sb:hasSelector ex:selector_f37d19b7-fc9b-4895-859f-df8ca4756042_monitor ;
+    sb:hasTriggerPolicy ex:policy_f37d19b7-fc9b-4895-859f-df8ca4756042 .
+
+ex:action_91465e62-707c-46ce-bf50-6f1471e234b5 a sb:LogAction ;
+    sb:actionId "91465e62-707c-46ce-bf50-6f1471e234b5" ;
+    sb:content "{{$.point_name}} 在 {{$.time}} 触发模拟告警，值为 {{$.value}}" ;
+    sb:level "WARNING" .
+
+ex:condition_f37d19b7-fc9b-4895-859f-df8ca4756042_root a sb:Comparison ;
+    sb:leftOperand ex:operand_f37d19b7-fc9b-4895-859f-df8ca4756042_root_left ;
+    sb:operator "GreaterThan" ;
+    sb:rightOperand ex:operand_f37d19b7-fc9b-4895-859f-df8ca4756042_root_right .
+
+ex:operand_f37d19b7-fc9b-4895-859f-df8ca4756042_root_left a sb:PointValue ;
+    sb:selector_id "monitor" .
+
+ex:operand_f37d19b7-fc9b-4895-859f-df8ca4756042_root_right a sb:ConstantValue ;
+    sb:value 1.1e+02 .
+
+ex:policy_f37d19b7-fc9b-4895-859f-df8ca4756042 a sb:TriggerPolicy ;
+    sb:cooldown_seconds 0e+00 ;
+    sb:merge_window_seconds 0e+00 ;
+    sb:recovery_count 1 ;
+    sb:recovery_duration_seconds 0e+00 ;
+    sb:repeat_policy "OncePerIncident" ;
+    sb:trigger_count 1 ;
+    sb:trigger_duration_seconds 0e+00 .
+
+ex:selector_f37d19b7-fc9b-4895-859f-df8ca4756042_monitor a sb:PointIdSelector ;
+    sb:pointId "3b7f321b-5647-472a-b75e-9e39efc668fb" ;
+    sb:selectorId "monitor" .
+

@@ -50,20 +50,6 @@ class AssetService:
     # ==========================================================
 
     @staticmethod
-    def _prune_tree(nodes: list, viewable: set) -> list:
-        """按 viewable 集合递归剪枝，移除不可查看的分支"""
-        result = []
-        for node in nodes:
-            aid = node.get("asset_id")
-            children = node.get("sub_assets") or []
-            pruned_children = AssetService._prune_tree(children, viewable)
-            if aid in viewable or pruned_children:
-                node_copy = dict(node)
-                node_copy["sub_assets"] = pruned_children
-                result.append(node_copy)
-        return result
-
-    @staticmethod
     def _validate_terminal_request_binding(
         db: Session,
         target_request_id: str | None,
@@ -459,8 +445,15 @@ class AssetService:
 
     @staticmethod
     def query_assets_tree(db: Session, viewable: set | None = None) -> List[Dict[str, Any]]:
-        """返回按层级构造的树形资产列表，可选按 viewable 集合剪枝"""
-        stmt = select(Asset).order_by(Asset.asset_path)
+        """返回同级节点按名称排序的资产树，并在查询时限定可见范围。"""
+        if viewable is not None and not viewable:
+            return []
+
+        stmt = select(Asset)
+        if viewable is not None:
+            # viewable 已包含拥有 R 权限的资产及其祖先，可直接下推到数据库。
+            stmt = stmt.where(Asset.asset_id.in_(viewable))
+        stmt = stmt.order_by(Asset.name.asc(), Asset.asset_id.asc())
         rows = db.execute(stmt).scalars().all()
 
         # 批量查询终端和传感器的扩展表，获取 is_online
@@ -491,8 +484,6 @@ class AssetService:
             else:
                 roots.append(nodes[a.asset_id])
 
-        if viewable is not None:
-            roots = AssetService._prune_tree(roots, viewable)
         return roots
     
     @staticmethod
@@ -553,7 +544,11 @@ class AssetService:
                 count_stmt = count_stmt.join(AssetSensor, Asset.asset_id == AssetSensor.asset_id).where(AssetSensor.is_online == is_online_filter)
 
         total = db.execute(count_stmt).scalar() or 0
-        rows = db.execute(stmt.offset(offset).limit(limit)).scalars().all()
+        rows = db.execute(
+            stmt.order_by(Asset.name.asc(), Asset.asset_id.asc())
+            .offset(offset)
+            .limit(limit)
+        ).scalars().all()
 
         # 批量查询终端和传感器的扩展表，获取 is_online
         terminal_ids = [a.asset_id for a in rows if a.asset_type == "terminal"]

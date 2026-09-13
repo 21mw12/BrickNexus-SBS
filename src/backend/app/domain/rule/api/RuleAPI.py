@@ -106,6 +106,9 @@ def toggle_rule(
 ):
     try:
         return Response.success(RuleService.toggle(rule_id, authorization or "", db))
+    except PermissionError as exc:
+        db.rollback()
+        return Response.error_forbidden(str(exc))
     except ValidationError as exc:
         db.rollback()
         return Response.error_params(str(exc))

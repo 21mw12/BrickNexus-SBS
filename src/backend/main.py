@@ -13,6 +13,7 @@ from app.domain.common.PageInitializer import ensure_pages, refresh_page_permiss
 from app.domain.collector import collector_runtime
 from app.infra.RDF import asset_rdf_runtime
 from app.domain.rule.service import rule_runtime
+from app.domain.sandbox.service.SandboxRuntime import sandbox_runtime
 
 
 logger = get_logger()
@@ -39,6 +40,8 @@ async def lifespan(app: FastAPI):
     # ===================== 数据运行时初始化 =====================
     # RuntimeManager 内部统一启动实时推送监听器和数据采集任务。
     await collector_runtime.start()
+    # ===================== 数字孪生沙盒运行时 =====================
+    sandbox_runtime.start()
 
     logger.info("SmartBuilding v2.0 启动完成")
 
@@ -48,12 +51,15 @@ async def lifespan(app: FastAPI):
         # 即使应用运行期间发生异常，也必须释放完整的数据运行时。
         logger.info("SmartBuilding v2.0 正在关闭...")
         try:
-            await collector_runtime.shutdown()
+            await sandbox_runtime.shutdown()
         finally:
             try:
-                rule_runtime.shutdown()
+                await collector_runtime.shutdown()
             finally:
-                asset_rdf_runtime.shutdown()
+                try:
+                    rule_runtime.shutdown()
+                finally:
+                    asset_rdf_runtime.shutdown()
         logger.info("SmartBuilding v2.0 已关闭")
 
 
@@ -92,12 +98,25 @@ from app.domain.data.api.HistoryAPI import router as history_router
 api_router.include_router(history_router)
 from app.domain.rule.api.RuleAPI import router as rule_router
 api_router.include_router(rule_router)
+from app.domain.agent.rule.api import router as rule_agent_router
+api_router.include_router(rule_agent_router)
+from app.domain.agent.conversation.api import router as agent_conversation_router
+api_router.include_router(agent_conversation_router)
+from app.domain.agent.analysis.api import router as analysis_agent_router
+api_router.include_router(analysis_agent_router)
 from app.domain.log.api.LogAPI import router as log_router
 api_router.include_router(log_router)
 from app.domain.dashboard.api.DashboardAPI import router as dashboard_router
 api_router.include_router(dashboard_router)
+from app.domain.sandbox.api.SandboxAPI import router as sandbox_router, ws_router as sandbox_ws_router
+api_router.include_router(sandbox_router)
+api_router.include_router(sandbox_ws_router)
 from app.domain.user.api.UserAPI import router as user_router
 api_router.include_router(user_router)
+from app.domain.settings.api import router as settings_llm_router
+api_router.include_router(settings_llm_router)
+from app.domain.analytics.api import router as analytics_router
+api_router.include_router(analytics_router)
 app.include_router(api_router)
 
 if __name__ == "__main__":

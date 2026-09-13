@@ -29,6 +29,17 @@
 
 # 项目结构
 
+## API 文档
+
+- [时序数据 API](docs/api/data.md)
+- [智能分析 API](docs/api/analytics.md)
+- [智能分析 AI 解读 API](docs/api/agent-analysis.md)
+- [规则自然语言配置 API](docs/api/agent-rule.md)
+- [数字孪生沙盒 API](docs/api/sandbox.md)
+- [系统设置与大语言模型 API](docs/api/settings.md)
+- [大模型调用与 Agent 会话架构](docs/architecture/llm.md)
+
+
 - domain：业务模块（再用文件夹区分不同业务，可包含以下文件夹）
   - api：对前端或其他服务开放的接口
   - service：业务逻辑

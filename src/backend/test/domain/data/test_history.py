@@ -72,6 +72,7 @@ def test_future_end_is_clipped_and_short_actual_range_is_queried() -> None:
             "downsampled": False,
             "times": ["2026-08-13 14:46:00"],
             "values": [12.5],
+            "normalized_values": [50.0],
         }
     ]
     assert measurements.calls[0][1] == datetime(2026, 8, 13, 6, 45, tzinfo=timezone.utc)
@@ -103,7 +104,12 @@ def test_each_point_is_downsampled_independently() -> None:
     assert result["points"][1]["returned_count"] == 100
     assert result["points"][1]["downsampled"] is True
     for item in result["points"]:
-        assert item["returned_count"] == len(item["times"]) == len(item["values"])
+        assert (
+            item["returned_count"]
+            == len(item["times"])
+            == len(item["values"])
+            == len(item["normalized_values"])
+        )
 
 
 @pytest.mark.parametrize(

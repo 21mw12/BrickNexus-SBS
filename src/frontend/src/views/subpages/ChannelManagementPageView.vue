@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { menuConfig, isMenuGroup } from '../../config/menu'
 import { createHttpChannel, createMqttChannel, deleteHttpChannel, deleteMqttChannel, editHttpChannel, editMqttChannel, fetchHttpChannel, fetchHttpChannels, fetchMqttChannel, fetchMqttChannels, type ChannelType, type HttpChannelListItem, type MqttChannelListItem } from '../../api/channel'
 import ConfirmModal from '../modals/ConfirmModal.vue'
 import HeaderTableEditor from '../../components/form/HeaderTableEditor.vue'
+import { notifyRetryableError } from '../../utils/notification'
 
 const router=useRouter(),route=useRoute()
 const siblings=computed(()=>{for(const entry of menuConfig)if(isMenuGroup(entry)&&entry.children.some(c=>c.route===route.path))return entry.children;return[]})
 const type=ref<ChannelType>('mqtt');const mqttRows=ref<MqttChannelListItem[]>([]);const httpRows=ref<HttpChannelListItem[]>([]);const loading=ref(false);const error=ref('');const page=ref(1);const pageSize=ref(10);const total=ref(0);const tableArea=ref<HTMLElement|null>(null)
+watch(error,value=>{if(value){notifyRetryableError(value,()=>void load(page.value),'通道列表加载失败');error.value=''}})
 const filters=reactive({broker_host:'',username:'',base_url:''});const pages=computed(()=>Math.max(1,Math.ceil(total.value/pageSize.value)))
 let observer:ResizeObserver|null=null;let resizeTimer:ReturnType<typeof setTimeout>|null=null
 async function load(target=1){loading.value=true;error.value='';page.value=target;try{if(type.value==='mqtt'){const r=await fetchMqttChannels(target,pageSize.value,{broker_host:filters.broker_host.trim()||undefined,username:filters.username.trim()||undefined});mqttRows.value=r.data;total.value=r.total}else{const r=await fetchHttpChannels(target,pageSize.value,{base_url:filters.base_url.trim()||undefined});httpRows.value=r.data;total.value=r.total}}catch(e:any){error.value=e?.message||'加载通道失败';total.value=0}finally{loading.value=false}}

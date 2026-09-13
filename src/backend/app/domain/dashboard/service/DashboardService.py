@@ -73,6 +73,12 @@ class DashboardService:
             "usage": "选择有权查看的测点和查询时间范围后生成历史数据结果。",
         },
         {
+            "key": "data:analysis",
+            "item": "智能分析",
+            "description": "对授权测点的历史数据执行异常检测、运行状态聚类和趋势预测。",
+            "usage": "选择测点、时间范围和算法参数后执行即时分析并查看结果。",
+        },
+        {
             "key": "channel",
             "item": "采控通道配置",
             "description": "通过 MQTT 或 HTTP 通道采集设备数据，并使用已配置的 Control 控制终端或传感器。",

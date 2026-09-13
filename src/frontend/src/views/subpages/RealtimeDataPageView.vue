@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, type PropType } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, watch, type PropType } from 'vue'
 import { fetchAssetTree, sortAssetTreeForDisplay, type AssetTreeNode } from '../../api/asset'
 import { fetchFloorPlan, fetchFloorPlanImage, type FloorPlan, type FloorRoomRegion } from '../../api/floorPlan'
 import { fetchTerminalTree, type TerminalTree } from '../../api/request'
@@ -8,19 +7,13 @@ import {
   TerminalRealtimeSocket, type RealtimeConnectionState, type RealtimeErrorMessage,
   type RealtimeMessage, type SnapshotMessage, type TerminalSnapshot,
 } from '../../api/realtime'
-import { isMenuGroup, menuConfig } from '../../config/menu'
 import { redirectToLogin } from '../../utils/authSession'
 import ControlExecutionModal from '../modals/ControlExecutionModal.vue'
 import type { ControlAssetType } from '../../api/control'
+import { notifyError, notifyInfo } from '../../utils/notification'
+import DataSectionTabs from '../../components/data/DataSectionTabs.vue'
 
 type Selection = { type: 'floor' | 'room'; node: AssetTreeNode; floor: AssetTreeNode; building: AssetTreeNode }
-
-const route = useRoute()
-const router = useRouter()
-const siblings = computed(() => {
-  for (const entry of menuConfig) if (isMenuGroup(entry) && entry.children.some(item => item.route === route.path)) return entry.children
-  return []
-})
 
 const tree = ref<AssetTreeNode[]>([])
 const treeLoading = ref(true)
@@ -35,6 +28,8 @@ const missingIds = ref<string[]>([])
 const rejectedIds = ref<string[]>([])
 const errorMessage = ref('')
 const infoMessage = ref('')
+watch(errorMessage, value => { if (value) { notifyError(value, '实时数据错误'); errorMessage.value = '' } })
+watch(infoMessage, value => { if (value) { notifyInfo(value, '实时数据提示'); infoMessage.value = '' } })
 const floorPlan = ref<FloorPlan | null>(null)
 const floorImageUrl = ref('')
 const planLoading = ref(false)
@@ -209,9 +204,7 @@ onBeforeUnmount(() => { selectionVersion += 1; socket.stop(); clearFloorPlan() }
 <template>
   <main class="page-content">
     <section class="workspace">
-      <nav class="sibling-tabs">
-        <button v-for="sib in siblings" :key="sib.route" class="sibling-tab" :class="{ active: route.path === sib.route }" @click="router.push(sib.route)">{{ sib.name }}</button>
-      </nav>
+      <DataSectionTabs />
 
       <header class="realtime-header">
         <div><h1>实时数据</h1><p>{{ selectedTitle }}</p></div>
@@ -222,8 +215,6 @@ onBeforeUnmount(() => { selectionVersion += 1; socket.stop(); clearFloorPlan() }
           <span class="last-time">更新：{{ latestTime ? formatTime(latestTime) : '--' }}</span>
         </div>
       </header>
-
-      <div v-if="errorMessage || infoMessage" class="message" :class="errorMessage ? 'error' : 'info'">{{ errorMessage || infoMessage }}<button @click="errorMessage = ''; infoMessage = ''">×</button></div>
 
       <div class="content-layout">
         <section class="data-panel">

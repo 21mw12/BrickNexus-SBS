@@ -65,6 +65,8 @@ def _database(tmp_path):
 
 
 def test_rule_crud_toggle_and_operation_log_snapshot(monkeypatch, tmp_path):
+    # 此测试隔离资产授权；真实授权行为在 test_rule_agent 中独立验证。
+    monkeypatch.setattr(rule_service_module, "RulePermissionService", lambda *_: SimpleNamespace(validate_config=lambda _: None))
     engine, factory = _database(tmp_path)
     monkeypatch.setattr(rule_rdf_service, "rule_dir", tmp_path / "rdf" / "rule")
     monkeypatch.setattr(RuleService, "_validate_point", staticmethod(lambda _config: None))
@@ -221,6 +223,7 @@ def test_rule_calendar_day_uses_configured_business_timezone():
 
 
 def test_semantic_selector_validation_allows_zero_instances_and_find_has_no_sensor(monkeypatch, tmp_path):
+    monkeypatch.setattr(rule_service_module, "RulePermissionService", lambda *_: SimpleNamespace(validate_config=lambda _: None))
     engine, factory = _database(tmp_path)
     monkeypatch.setattr(rule_rdf_service, "rule_dir", tmp_path / "rdf" / "rule")
     monkeypatch.setattr(asset_rdf_runtime, "get_status", lambda: SimpleNamespace(dirty=False))

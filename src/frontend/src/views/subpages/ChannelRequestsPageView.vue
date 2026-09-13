@@ -8,9 +8,11 @@
 	import JsonTreeViewer from '../modals/asset/JsonTreeViewer.vue'
 	import HeaderTableEditor from '../../components/form/HeaderTableEditor.vue'
 	import JsonObjectEditor from '../../components/form/JsonObjectEditor.vue'
+	import { notifyRetryableError } from '../../utils/notification'
 	
 	const router=useRouter(),route=useRoute();const siblings=computed(()=>{for(const e of menuConfig)if(isMenuGroup(e)&&e.children.some(c=>c.route===route.path))return e.children;return[]})
 	const rows=ref<RequestListItemV2[]>([]),loading=ref(false),error=ref(''),page=ref(1),pageSize=ref(10),total=ref(0),tableArea=ref<HTMLElement|null>(null);const pages=computed(()=>Math.max(1,Math.ceil(total.value/pageSize.value)))
+	watch(error,value=>{if(value){notifyRetryableError(value,()=>void load(page.value),'请求列表加载失败');error.value=''}})
 	const filters=reactive({name:'',type:'' as ''|RequestProtocol,status:'' as ''|'true'|'false'});let observer:ResizeObserver|null=null,resizeTimer:ReturnType<typeof setTimeout>|null=null
 	async function load(target=1){loading.value=true;error.value='';page.value=target;try{const r=await fetchRequestPageV2(target,pageSize.value,{name:filters.name.trim()||undefined,type:filters.type||undefined,status:filters.status===''?undefined:filters.status==='true'});rows.value=r.data;total.value=r.total}catch(e:any){error.value=e?.message||'加载请求失败';rows.value=[];total.value=0}finally{loading.value=false}}
 	function resetFilters(){Object.assign(filters,{name:'',type:'',status:''});load(1)}function fmt(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?value:d.toLocaleString('zh-CN',{hour12:false})}
@@ -63,7 +65,6 @@
                         <button type="button" class="create inline-create" @click="openCreate">新增</button>
                     </div>
 				</form>
-				<div v-if="error" class="alert">{{error}}<button @click="load(page)">重试</button></div>
 				<div ref="tableArea" class="table-area">
 					<table>
 						<thead>

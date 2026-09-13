@@ -40,9 +40,9 @@ class SchedulerManager:
         self,
         task_id: str,
         func,
-        interval_seconds: int,
+        interval_seconds: float,
         initial_delay_seconds: float | None = None,
-    ):
+    ) -> Job:
         """
         添加一个间隔执行的任务（每X秒执行一次）
         :param task_id: 任务唯一 ID
@@ -63,7 +63,7 @@ class SchedulerManager:
                 seconds=max(0, initial_delay_seconds)
             )
 
-        self.scheduler.add_job(
+        return self.scheduler.add_job(
             self._wrap_func(func),
             trigger="interval",
             seconds=interval_seconds,

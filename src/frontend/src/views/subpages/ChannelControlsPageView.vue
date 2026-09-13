@@ -9,8 +9,10 @@ import ConfirmModal from'../modals/ConfirmModal.vue'
 import JsonTreeViewer from'../modals/asset/JsonTreeViewer.vue'
 import HeaderTableEditor from'../../components/form/HeaderTableEditor.vue'
 import JsonObjectEditor from'../../components/form/JsonObjectEditor.vue'
+import{notifyRetryableError}from'../../utils/notification'
 const router=useRouter(),route=useRoute(),siblings=computed(()=>{for(const e of menuConfig)if(isMenuGroup(e)&&e.children.some(c=>c.route===route.path))return e.children;return[]})
 const rows=ref<ControlListItem[]>([]),loading=ref(false),error=ref(''),page=ref(1),pageSize=ref(10),total=ref(0),tableArea=ref<HTMLElement|null>(null),pages=computed(()=>Math.max(1,Math.ceil(total.value/pageSize.value)));const filters=reactive({name:'',type:''as''|ControlProtocol,status:''as''|'true'|'false'});let observer:ResizeObserver|null=null,timer:ReturnType<typeof setTimeout>|null=null
+watch(error,value=>{if(value){notifyRetryableError(value,()=>void load(page.value),'控制列表加载失败');error.value=''}})
 async function load(target=1){loading.value=true;error.value='';page.value=target;try{const r=await fetchControlPage(target,pageSize.value,{name:filters.name.trim()||undefined,type:filters.type||undefined,status:filters.status===''?undefined:filters.status==='true'});rows.value=r.data;total.value=r.total}catch(e:any){error.value=e?.message||'加载控制失败';rows.value=[];total.value=0}finally{loading.value=false}}
 function resetFilters(){Object.assign(filters,{name:'',type:'',status:''});load(1)}function fmt(v:string){const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString('zh-CN',{hour12:false})}function resize(){if(!tableArea.value)return;const n=Math.max(3,Math.min(50,Math.floor((tableArea.value.getBoundingClientRect().height-43)/49)));if(n!==pageSize.value){pageSize.value=n;load(1)}}function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(resize,120)}
 const mqttChannels=ref<MqttChannelListItem[]>([]),httpChannels=ref<HttpChannelListItem[]>([]),assets=ref<AssetTreeNode[]>([]),resourcesLoading=ref(false)
@@ -51,7 +53,6 @@ onMounted(async()=>{await nextTick();resize();if(!loading.value)await load();obs
                         <button type="button" class="create" @click="openCreate">新增</button>
                     </div>
 				</form>
-				<div v-if="error" class="alert">{{error}}</div>
 				<div ref="tableArea" class="table-area">
 					<table>
 						<thead>

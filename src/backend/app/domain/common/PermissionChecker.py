@@ -205,18 +205,20 @@ def _build_viewable_set(
     - 角色 R 资产 + 用户 R 资产
     - 所有 R 资产的祖先（R 向上穿透）
     """
-    from app.domain.asset.repository.AssetRepository import AssetRepository
+    from sqlalchemy import select
+    from app.domain.asset.repository.models.Asset import Asset
 
     r_ids = {aid for aid, perm in union_perms.items() if "R" in perm}
     if not r_ids:
         return set()
 
-    asset_repo = AssetRepository()
     viewable: Set[str] = set(r_ids)
-    for aid in list(r_ids):
-        asset = asset_repo.get(aid, db)
-        if asset and asset.asset_path:
-            viewable.update(asset.asset_path.split("/"))
+    paths = db.execute(
+        select(Asset.asset_path).where(Asset.asset_id.in_(r_ids))
+    ).scalars().all()
+    for asset_path in paths:
+        if asset_path:
+            viewable.update(asset_path.split("/"))
 
     return viewable
 

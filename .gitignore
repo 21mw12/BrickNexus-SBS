@@ -14,4 +14,10 @@ docker/backend-data/
 .vscode/
 
 TODOLIST.md
-docs/
+
+# 文档默认不纳入版本控制，仅保留后端 API 文档。
+/docs/*
+!/docs/API文档.md
+/src/backend/docs/*
+!/src/backend/docs/api/
+!/src/backend/docs/api/**
